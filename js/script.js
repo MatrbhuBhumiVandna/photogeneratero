@@ -1,128 +1,126 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const photoUpload = document.getElementById('photoUpload');
+    // Elements
+    const fileInput = document.getElementById('fileInput');
+    const uploadBtn = document.getElementById('uploadBtn');
     const downloadBtn = document.getElementById('downloadBtn');
-    const userPhoto = document.getElementById('userPhoto');
-    const selectedFrame = document.getElementById('selectedFrame');
-    const frameOptions = document.querySelectorAll('.frame-option');
-    
-    // Touch/Mouse gesture variables
-    let scale = 1;
+    const userImage = document.getElementById('userImage');
+    const frameImage = document.getElementById('frameImage');
+    const imageContainer = document.getElementById('imageContainer');
+    const framesScroll = document.getElementById('framesScroll');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+
+    // Frame options
+    const frameOptions = [
+        'frames/frame1.png',
+        'frames/frame2.png',
+        'frames/frame3.png'
+    ];
+
+    // Variables for transformations
+    let initialScale = 1;
+    let currentScale = 1;
+    let initialDistance = 0;
     let posX = 0;
     let posY = 0;
-    let lastX = 0;
-    let lastY = 0;
+    let initialX = 0;
+    let initialY = 0;
     let isDragging = false;
-    let startDistance = 0;
-    
-    // Frame selection
-    frameOptions.forEach(option => {
-        option.addEventListener('click', function() {
-            frameOptions.forEach(opt => opt.classList.remove('active'));
-            this.classList.add('active');
-            selectedFrame.src = this.dataset.frame;
+    let keyPressInterval;
+
+    // Initialize frame options
+    function initFrames() {
+        frameOptions.forEach((frame, index) => {
+            const frameOption = document.createElement('img');
+            frameOption.src = frame;
+            frameOption.classList.add('frame-option');
+            frameOption.dataset.index = index;
+            
+            if (index === 0) {
+                frameOption.classList.add('active');
+            }
+            
+            frameOption.addEventListener('click', function() {
+                document.querySelectorAll('.frame-option').forEach(f => {
+                    f.classList.remove('active');
+                });
+                this.classList.add('active');
+                frameImage.src = this.src;
+            });
+            
+            framesScroll.appendChild(frameOption);
         });
-    });
-    
-    // Photo upload
-    photoUpload.addEventListener('change', function(e) {
-        if (e.target.files.length) {
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                userPhoto.src = event.target.result;
-                resetPhotoPosition();
-            };
-            reader.readAsDataURL(e.target.files[0]);
-        }
-    });
-    
-    // Reset photo position and scale
-    function resetPhotoPosition() {
-        scale = 1;
+    }
+
+    // Show loading indicator
+    function showLoading() {
+        loadingOverlay.style.display = 'flex';
+    }
+
+    // Hide loading indicator
+    function hideLoading() {
+        loadingOverlay.style.display = 'none';
+    }
+
+    // Reset image position and scale
+    function resetImagePosition() {
         posX = 0;
         posY = 0;
-        updatePhotoTransform();
+        currentScale = 1;
+        updateImageTransform();
     }
-    
-    // Update photo transform style
-    function updatePhotoTransform() {
-        userPhoto.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
+
+    // Update image transform
+    function updateImageTransform() {
+        userImage.style.transform = `translate(${posX}px, ${posY}px) scale(${currentScale})`;
     }
-    
-    // Touch/Mouse event handlers
-    function handleStart(x, y) {
-        isDragging = true;
-        lastX = x;
-        lastY = y;
-    }
-    
-    function handleMove(x, y) {
-        if (isDragging) {
-            const deltaX = x - lastX;
-            const deltaY = y - lastY;
-            
-            posX += deltaX;
-            posY += deltaY;
-            
-            lastX = x;
-            lastY = y;
-            
-            updatePhotoTransform();
-        }
-    }
-    
-    function handleEnd() {
-        isDragging = false;
-    }
-    
-    // Mouse events
-    userPhoto.addEventListener('mousedown', function(e) {
-        handleStart(e.clientX, e.clientY);
+
+    // Handle touch start
+    function handleTouchStart(e) {
         e.preventDefault();
-    });
-    
-    document.addEventListener('mousemove', function(e) {
-        handleMove(e.clientX, e.clientY);
-    });
-    
-    document.addEventListener('mouseup', handleEnd);
-    
-    // Touch events
-    userPhoto.addEventListener('touchstart', function(e) {
+        
         if (e.touches.length === 1) {
-            handleStart(e.touches[0].clientX, e.touches[0].clientY);
+            isDragging = true;
+            initialX = e.touches[0].clientX - posX;
+            initialY = e.touches[0].clientY - posY;
         } else if (e.touches.length === 2) {
-            startDistance = getDistance(
+            isDragging = false;
+            initialDistance = getDistance(
                 e.touches[0].clientX, e.touches[0].clientY,
                 e.touches[1].clientX, e.touches[1].clientY
             );
+            initialScale = currentScale;
         }
+    }
+
+    // Handle touch move
+    function handleTouchMove(e) {
         e.preventDefault();
-    });
-    
-    userPhoto.addEventListener('touchmove', function(e) {
-        if (e.touches.length === 1) {
-            handleMove(e.touches[0].clientX, e.touches[0].clientY);
+        
+        if (e.touches.length === 1 && isDragging) {
+            posX = e.touches[0].clientX - initialX;
+            posY = e.touches[0].clientY - initialY;
+            updateImageTransform();
         } else if (e.touches.length === 2) {
+            isDragging = false;
             const currentDistance = getDistance(
                 e.touches[0].clientX, e.touches[0].clientY,
                 e.touches[1].clientX, e.touches[1].clientY
             );
             
-            if (startDistance > 0) {
-                scale = Math.max(0.5, Math.min(3, scale * (currentDistance / startDistance)));
-                updatePhotoTransform();
+            if (initialDistance !== 0) {
+                currentScale = initialScale * (currentDistance / initialDistance);
+                currentScale = Math.max(0.5, Math.min(currentScale, 3));
+                updateImageTransform();
             }
-            startDistance = currentDistance;
         }
-        e.preventDefault();
-    });
-    
-    userPhoto.addEventListener('touchend', function(e) {
-        if (e.touches.length === 0) {
-            handleEnd();
-        }
-        startDistance = 0;
-    });
-    
+    }
+
+    // Handle touch end
+    function handleTouchEnd() {
+        initialDistance = 0;
+        isDragging = false;
+    }
+
+    // Calculate distance between two points
     function getDistance(x1, y1, x2, y2) {
-        return Math.hypot(x2 - x1, y2
+       
