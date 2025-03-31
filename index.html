@@ -48,7 +48,7 @@
             position: relative;
             width: 80%;
             height: 0;
-            padding-bottom: 142.22%;
+            padding-bottom: 142.22%; /* 16:9 aspect ratio */
         }
         
         .editor-content {
@@ -158,7 +158,7 @@
             let initialScale = 1;
             let initialAngle = 0;
             let initialMidpoint = { x: 0, y: 0 };
-            let initialTransform = { x: 0, y: 0 };
+            let initialTransform = { x: 0, y: 0, rotation: 0 };
             let isPinching = false;
             
             // Upload photo
@@ -208,7 +208,11 @@
                     initialScale = currentScale;
                     initialAngle = getAngle(touch1, touch2);
                     initialMidpoint = getMidpoint(touch1, touch2);
-                    initialTransform = { x: currentX, y: currentY };
+                    initialTransform = { 
+                        x: currentX, 
+                        y: currentY,
+                        rotation: currentRotation
+                    };
                     
                     e.preventDefault();
                 }
@@ -227,9 +231,9 @@
                     // Calculate scale
                     currentScale = Math.max(0.5, Math.min(3, initialScale * (currentDistance / initialDistance)));
                     
-                    // Calculate rotation (reduced sensitivity to 20%)
-                    const rotationDelta = (currentAngle - initialAngle) * 0.2;
-                    currentRotation = rotationDelta;
+                    // Calculate rotation with 60% sensitivity
+                    const rotationDelta = (currentAngle - initialAngle) * 0.6;
+                    currentRotation = initialTransform.rotation + rotationDelta;
                     
                     // Calculate translation (drag)
                     const deltaX = currentMidpoint.x - initialMidpoint.x;
@@ -290,7 +294,7 @@
                     // Move to center of canvas
                     ctx.translate(canvas.width/2, canvas.height/2);
                     
-                    // Apply rotation (from reduced sensitivity)
+                    // Apply rotation (with 60% sensitivity)
                     ctx.rotate(currentRotation * Math.PI / 180);
                     
                     // Calculate scaled dimensions
