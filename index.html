@@ -45,7 +45,6 @@
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             background-color: #fff;
-            touch-action: pan-y;
         }
         
         .editor-container {
@@ -53,7 +52,6 @@
             width: 1080px;
             height: 1920px;
             max-width: 100%;
-            touch-action: none;
         }
         
         #photo-container {
@@ -61,6 +59,7 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
+            touch-action: none;
         }
         
         #user-photo {
@@ -71,16 +70,27 @@
             object-position: center;
             user-select: none;
             -webkit-user-select: none;
-            touch-action: none;
         }
         
         #frame {
             position: absolute;
             width: 100%;
             height: 100%;
-            pointer-events: none;
             z-index: 2;
-            touch-action: none;
+        }
+        
+        /* Make white parts of frame non-interactive */
+        #frame[src="frame.png"] {
+            pointer-events: none;
+        }
+        
+        /* Make non-white parts of frame interactive for scrolling */
+        .frame-scroll-area {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 3;
+            pointer-events: auto;
         }
         
         .controls {
@@ -89,7 +99,6 @@
             gap: 15px;
             width: 100%;
             max-width: 500px;
-            touch-action: pan-y;
         }
         
         .btn {
@@ -101,7 +110,6 @@
             font-size: 16px;
             cursor: pointer;
             transition: background-color 0.3s;
-            touch-action: manipulation;
         }
         
         .btn:hover {
@@ -123,7 +131,6 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             width: 100%;
             max-width: 500px;
-            touch-action: pan-y;
         }
         
         .instructions h3 {
@@ -169,6 +176,8 @@
                     <img id="user-photo" src="default-user.png" alt="User Photo">
                 </div>
                 <img id="frame" src="frame.png" alt="Frame">
+                <!-- Transparent overlay for non-white frame areas -->
+                <div class="frame-scroll-area" id="frame-scroll-area"></div>
             </div>
         </div>
         
@@ -184,7 +193,7 @@
                 <li>Upload your photo using the button above</li>
                 <li>Drag with one finger to position the photo</li>
                 <li>Pinch with two fingers to zoom in/out</li>
-                <li>Scroll empty areas of the frame with one finger</li>
+                <li>Scroll by touching the frame's non-white areas</li>
                 <li>Download when ready</li>
             </ul>
         </div>
@@ -200,6 +209,7 @@
             const photoContainer = document.getElementById('photo-container');
             const scrollContainer = document.getElementById('scroll-container');
             const editorContainer = document.querySelector('.editor-container');
+            const frameScrollArea = document.getElementById('frame-scroll-area');
             
             let currentScale = 1;
             let currentX = 0;
@@ -210,7 +220,6 @@
             let startX = 0;
             let startY = 0;
             let touchStartTime = 0;
-            let isInteractingWithPhoto = false;
             
             // Set initial photo container size
             function setPhotoContainerSize() {
@@ -289,46 +298,48 @@
             // Set initial size
             setPhotoContainerSize();
             
-            // Touch event handlers
-            photoContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
-            photoContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
-            photoContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
-            photoContainer.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+            // Touch event handlers for photo manipulation
+            photoContainer.addEventListener('touchstart', handlePhotoTouchStart, { passive: false });
+            photoContainer.addEventListener('touchmove', handlePhotoTouchMove, { passive: false });
+            photoContainer.addEventListener('touchend', handlePhotoTouchEnd, { passive: true });
+            photoContainer.addEventListener('touchcancel', handlePhotoTouchEnd, { passive: true });
             
-            function handleTouchStart(e) {
-                // Only handle touches on the photo container
-                if (e.target === photoContainer || e.target === userPhoto) {
-                    isInteractingWithPhoto = true;
-                    touchStartTime = Date.now();
-                    
-                    if (e.touches.length === 1) {
-                        // Single touch - prepare for drag
-                        isDraggingPhoto = true;
-                        startX = e.touches[0].clientX - currentX;
-                        startY = e.touches[0].clientY - currentY;
-                    } else if (e.touches.length === 2) {
-                        // Two touches - prepare for pinch zoom
-                        isDraggingPhoto = false;
-                        initialDistance = getDistance(
-                            e.touches[0].clientX, e.touches[0].clientY,
-                            e.touches[1].clientX, e.touches[1].clientY
-                        );
-                        initialScale = currentScale;
-                    }
+            // Make frame scroll area non-interactive for photo manipulation
+            frameScrollArea.addEventListener('touchstart', function(e) {
+                // Allow scroll container to handle these touches
+                e.stopPropagation();
+            }, { passive: true });
+            
+            function handlePhotoTouchStart(e) {
+                touchStartTime = Date.now();
+                
+                if (e.touches.length === 1) {
+                    // Single touch - prepare for drag
+                    isDraggingPhoto = true;
+                    startX = e.touches[0].clientX;
+                    startY = e.touches[0].clientY;
+                    e.preventDefault();
+                } else if (e.touches.length === 2) {
+                    // Two touches - prepare for pinch zoom
+                    isDraggingPhoto = false;
+                    initialDistance = getDistance(
+                        e.touches[0].clientX, e.touches[0].clientY,
+                        e.touches[1].clientX, e.touches[1].clientY
+                    );
+                    initialScale = currentScale;
                     e.preventDefault();
                 }
             }
             
-            function handleTouchMove(e) {
-                if (!isInteractingWithPhoto) return;
-                
-                // Check if this is a quick tap (should allow scroll)
-                const isQuickTap = (Date.now() - touchStartTime) < 200;
-                
-                if (isDraggingPhoto && e.touches.length === 1 && !isQuickTap) {
+            function handlePhotoTouchMove(e) {
+                if (isDraggingPhoto && e.touches.length === 1) {
                     // Single touch - drag
-                    currentX = e.touches[0].clientX - startX;
-                    currentY = e.touches[0].clientY - startY;
+                    const touch = e.touches[0];
+                    const deltaX = touch.clientX - startX;
+                    const deltaY = touch.clientY - startY;
+                    
+                    currentX += deltaX;
+                    currentY += deltaY;
                     
                     // Limit movement based on scale
                     const maxOffsetX = (userPhoto.width * currentScale - photoContainer.offsetWidth) / 2;
@@ -347,6 +358,9 @@
                     }
                     
                     applyTransform();
+                    
+                    startX = touch.clientX;
+                    startY = touch.clientY;
                     e.preventDefault();
                 } else if (e.touches.length === 2 && initialDistance !== null) {
                     // Two touches - pinch zoom
@@ -367,8 +381,7 @@
                 }
             }
             
-            function handleTouchEnd(e) {
-                isInteractingWithPhoto = false;
+            function handlePhotoTouchEnd(e) {
                 isDraggingPhoto = false;
                 initialDistance = null;
             }
