@@ -1,46 +1,35 @@
-/* Previous styles remain the same */
+/* Add these styles to your existing CSS */
 
-.frame-container {
-    position: relative;
+.frame-selection {
     width: 100%;
-    max-width: 375px;
-    height: 667px;
-    overflow: hidden;
-    background-color: #eee;
-    border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    max-width: 1080px;
+    margin-top: 20px;
 }
 
-#frameCanvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 1;
+.frames-scroll {
+    display: flex;
+    gap: 15px;
+    padding: 10px 5px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    scrollbar-width: none; /* Hide scrollbar on Firefox */
 }
 
-.user-photo {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+.frames-scroll::-webkit-scrollbar {
+    display: none; /* Hide scrollbar on Chrome/Safari */
+}
+
+.frame-option {
+    width: 80px;
+    height: 142px; /* 9:16 aspect ratio */
+    border-radius: 8px;
+    border: 2px solid #ddd;
     object-fit: cover;
-    user-select: none;
-    -webkit-user-drag: none;
-    touch-action: none;
+    flex-shrink: 0; /* Prevent shrinking */
+    cursor: pointer;
+    transition: border-color 0.2s;
 }
 
-.frame {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    user-select: none;
-    -webkit-user-drag: none;
-    z-index: 3;
+.frame-option:hover, .frame-option.active {
+    border-color: #075e54;
 }
