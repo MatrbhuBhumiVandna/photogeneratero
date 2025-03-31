@@ -227,8 +227,9 @@
                     // Calculate scale
                     currentScale = Math.max(0.5, Math.min(3, initialScale * (currentDistance / initialDistance)));
                     
-                    // Calculate rotation
-                    currentRotation = currentAngle - initialAngle;
+                    // Calculate rotation (reduced sensitivity to 20%)
+                    const rotationDelta = (currentAngle - initialAngle) * 0.2;
+                    currentRotation = rotationDelta;
                     
                     // Calculate translation (drag)
                     const deltaX = currentMidpoint.x - initialMidpoint.x;
@@ -289,18 +290,15 @@
                     // Move to center of canvas
                     ctx.translate(canvas.width/2, canvas.height/2);
                     
-                    // Apply rotation
+                    // Apply rotation (from reduced sensitivity)
                     ctx.rotate(currentRotation * Math.PI / 180);
                     
                     // Calculate scaled dimensions
                     const scaledWidth = tempImg.naturalWidth * currentScale;
                     const scaledHeight = tempImg.naturalHeight * currentScale;
                     
-                    // Calculate the container's scale factor (0.8 = 80%)
+                    // Adjust position for the 80% container to 100% output
                     const containerScale = 0.8;
-                    
-                    // Adjust the position for the final output
-                    // We need to scale the position from the 80% container to the 100% output
                     const scaleFactor = 1 / containerScale;
                     const adjustedX = currentX * scaleFactor;
                     const adjustedY = currentY * scaleFactor;
