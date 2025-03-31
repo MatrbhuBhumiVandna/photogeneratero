@@ -1,0 +1,59 @@
+body {
+    background-color: #f8f9fa;
+    padding-bottom: 50px;
+}
+
+.frame-container {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.frame-image {
+    width: 100%;
+    display: block;
+}
+
+.photo-container {
+    position: absolute;
+    top: 20%;
+    left: 25%;
+    width: 50%;
+    height: 50%;
+    overflow: hidden;
+}
+
+.photo-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.frame-options {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.frame-option {
+    width: 80px;
+    height: 80px;
+    border: 2px solid #ddd;
+    cursor: pointer;
+    padding: 2px;
+}
+
+.frame-option.active {
+    border-color: #0d6efd;
+}
+
+.frame-option img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+#downloadBtn {
+    margin-top: 20px;
+}
