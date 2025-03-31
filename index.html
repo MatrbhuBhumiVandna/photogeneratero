@@ -46,9 +46,9 @@
         
         .editor-container {
             position: relative;
-            width: 80%; /* 20% smaller */
+            width: 80%;
             height: 0;
-            padding-bottom: 142.22%; /* 16:9 aspect ratio for 80% width */
+            padding-bottom: 142.22%;
         }
         
         .editor-content {
@@ -88,7 +88,8 @@
         
         .controls {
             display: flex;
-            flex-direction: column;
+            flex-wrap: wrap;
+            justify-content: center;
             gap: 15px;
             width: 100%;
             max-width: 500px;
@@ -96,12 +97,23 @@
         
         .btn {
             padding: 12px 20px;
-            background-color: #4CAF50;
             color: white;
             border: none;
             border-radius: 4px;
             font-size: 16px;
             cursor: pointer;
+        }
+        
+        .btn-upload {
+            background-color: #2196F3;
+        }
+        
+        .btn-download {
+            background-color: #4CAF50;
+        }
+        
+        .btn-reset {
+            background-color: #f44336;
         }
     </style>
 </head>
@@ -122,8 +134,9 @@
         
         <div class="controls">
             <input type="file" id="photo-upload" accept="image/*" style="display: none;">
-            <button class="btn" id="upload-btn">Upload Photo</button>
-            <button class="btn" id="download-btn">Download Image</button>
+            <button class="btn btn-upload" id="upload-btn">Upload Photo</button>
+            <button class="btn btn-reset" id="reset-btn">Reset Photo</button>
+            <button class="btn btn-download" id="download-btn">Download Image</button>
         </div>
     </div>
 
@@ -132,6 +145,7 @@
             const photoUpload = document.getElementById('photo-upload');
             const uploadBtn = document.getElementById('upload-btn');
             const downloadBtn = document.getElementById('download-btn');
+            const resetBtn = document.getElementById('reset-btn');
             const userPhoto = document.getElementById('user-photo');
             const photoContainer = document.getElementById('photo-container');
             
@@ -142,8 +156,8 @@
             let initialDistance = null;
             let initialScale = 1;
             let initialAngle = 0;
-            let initialX = 0;
-            let initialY = 0;
+            let initialMidpoint = { x: 0, y: 0 };
+            let initialTransform = { x: 0, y: 0 };
             let isPinching = false;
             
             // Upload photo
@@ -156,22 +170,24 @@
                     const reader = new FileReader();
                     reader.onload = function(event) {
                         userPhoto.src = event.target.result;
-                        resetPhotoPosition();
+                        resetPhoto();
                     };
                     reader.readAsDataURL(e.target.files[0]);
                 }
             });
             
-            // Download image (outputs 1080x1920)
+            // Reset photo
+            resetBtn.addEventListener('click', resetPhoto);
+            
+            // Download image
             downloadBtn.addEventListener('click', downloadImage);
             
             // Touch events
             photoContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
             photoContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
             photoContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
-            photoContainer.addEventListener('touchcancel', handleTouchEnd, { passive: true });
             
-            function resetPhotoPosition() {
+            function resetPhoto() {
                 currentScale = 1;
                 currentX = 0;
                 currentY = 0;
@@ -182,48 +198,43 @@
             function handleTouchStart(e) {
                 if (e.touches.length === 2) {
                     isPinching = true;
-                    initialDistance = getDistance(
-                        { x: e.touches[0].clientX, y: e.touches[0].clientY },
-                        { x: e.touches[1].clientX, y: e.touches[1].clientY }
-                    );
+                    
+                    // Calculate initial distance and angle
+                    const touch1 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                    const touch2 = { x: e.touches[1].clientX, y: e.touches[1].clientY };
+                    
+                    initialDistance = getDistance(touch1, touch2);
                     initialScale = currentScale;
-                    initialAngle = getAngle(
-                        { x: e.touches[0].clientX, y: e.touches[0].clientY },
-                        { x: e.touches[1].clientX, y: e.touches[1].clientY }
-                    );
-                    initialX = currentX;
-                    initialY = currentY;
+                    initialAngle = getAngle(touch1, touch2);
+                    initialMidpoint = getMidpoint(touch1, touch2);
+                    initialTransform = { x: currentX, y: currentY };
+                    
                     e.preventDefault();
                 }
             }
             
             function handleTouchMove(e) {
                 if (isPinching && e.touches.length === 2) {
+                    const touch1 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                    const touch2 = { x: e.touches[1].clientX, y: e.touches[1].clientY };
+                    
+                    // Calculate current distance and angle
+                    const currentDistance = getDistance(touch1, touch2);
+                    const currentAngle = getAngle(touch1, touch2);
+                    const currentMidpoint = getMidpoint(touch1, touch2);
+                    
                     // Calculate scale
-                    const currentDistance = getDistance(
-                        { x: e.touches[0].clientX, y: e.touches[0].clientY },
-                        { x: e.touches[1].clientX, y: e.touches[1].clientY }
-                    );
-                    currentScale = initialScale * (currentDistance / initialDistance);
-                    currentScale = Math.max(0.5, Math.min(3, currentScale));
+                    currentScale = Math.max(0.5, Math.min(3, initialScale * (currentDistance / initialDistance)));
                     
                     // Calculate rotation
-                    const currentAngle = getAngle(
-                        { x: e.touches[0].clientX, y: e.touches[0].clientY },
-                        { x: e.touches[1].clientX, y: e.touches[1].clientY }
-                    );
                     currentRotation = currentAngle - initialAngle;
                     
-                    // Calculate movement (average of both touches)
-                    const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-                    const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                    // Calculate translation (drag)
+                    const deltaX = currentMidpoint.x - initialMidpoint.x;
+                    const deltaY = currentMidpoint.y - initialMidpoint.y;
                     
-                    // Get the initial center point (approximation)
-                    const initialCenterX = centerX - (currentX - initialX);
-                    const initialCenterY = centerY - (currentY - initialY);
-                    
-                    currentX = centerX - initialCenterX;
-                    currentY = centerY - initialCenterY;
+                    currentX = initialTransform.x + deltaX;
+                    currentY = initialTransform.y + deltaY;
                     
                     applyTransform();
                     e.preventDefault();
@@ -236,12 +247,19 @@
                 }
             }
             
-            function getDistance(touch1, touch2) {
-                return Math.sqrt(Math.pow(touch2.x - touch1.x, 2) + Math.pow(touch2.y - touch1.y, 2));
+            function getDistance(p1, p2) {
+                return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
             }
             
-            function getAngle(touch1, touch2) {
-                return Math.atan2(touch2.y - touch1.y, touch2.x - touch1.x) * 180 / Math.PI;
+            function getAngle(p1, p2) {
+                return Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
+            }
+            
+            function getMidpoint(p1, p2) {
+                return {
+                    x: (p1.x + p2.x) / 2,
+                    y: (p1.y + p2.y) / 2
+                };
             }
             
             function applyTransform() {
@@ -260,27 +278,35 @@
                 
                 const tempImg = new Image();
                 tempImg.onload = function() {
-                    // Calculate dimensions with all transformations
-                    const scaledWidth = tempImg.width * currentScale;
-                    const scaledHeight = tempImg.height * currentScale;
-                    
                     // Draw white background
                     ctx.fillStyle = '#ffffff';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                     
-                    // Save context, rotate, then draw image
+                    // Save context for transformations
                     ctx.save();
+                    
+                    // Move to center, rotate, then draw image
                     ctx.translate(canvas.width/2, canvas.height/2);
                     ctx.rotate(currentRotation * Math.PI / 180);
                     
+                    // Calculate scaled dimensions
+                    const scaledWidth = tempImg.width * currentScale;
+                    const scaledHeight = tempImg.height * currentScale;
+                    
+                    // Adjust for the 80% container size when positioning
+                    const containerScale = 0.8;
+                    const adjustedX = currentX / containerScale;
+                    const adjustedY = currentY / containerScale;
+                    
                     ctx.drawImage(
                         tempImg,
-                        -scaledWidth/2 + currentX,
-                        -scaledHeight/2 + currentY,
+                        -scaledWidth/2 + adjustedX,
+                        -scaledHeight/2 + adjustedY,
                         scaledWidth,
                         scaledHeight
                     );
                     
+                    // Restore context
                     ctx.restore();
                     
                     // Draw frame
