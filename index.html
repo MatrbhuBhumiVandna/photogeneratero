@@ -148,6 +148,7 @@
             const resetBtn = document.getElementById('reset-btn');
             const userPhoto = document.getElementById('user-photo');
             const photoContainer = document.getElementById('photo-container');
+            const editorContainer = document.querySelector('.editor-container');
             
             let currentScale = 1;
             let currentX = 0;
@@ -285,19 +286,26 @@
                     // Save context for transformations
                     ctx.save();
                     
-                    // Move to center, rotate, then draw image
+                    // Move to center of canvas
                     ctx.translate(canvas.width/2, canvas.height/2);
+                    
+                    // Apply rotation
                     ctx.rotate(currentRotation * Math.PI / 180);
                     
                     // Calculate scaled dimensions
-                    const scaledWidth = tempImg.width * currentScale;
-                    const scaledHeight = tempImg.height * currentScale;
+                    const scaledWidth = tempImg.naturalWidth * currentScale;
+                    const scaledHeight = tempImg.naturalHeight * currentScale;
                     
-                    // Adjust for the 80% container size when positioning
+                    // Calculate the container's scale factor (0.8 = 80%)
                     const containerScale = 0.8;
-                    const adjustedX = currentX / containerScale;
-                    const adjustedY = currentY / containerScale;
                     
+                    // Adjust the position for the final output
+                    // We need to scale the position from the 80% container to the 100% output
+                    const scaleFactor = 1 / containerScale;
+                    const adjustedX = currentX * scaleFactor;
+                    const adjustedY = currentY * scaleFactor;
+                    
+                    // Draw the transformed image
                     ctx.drawImage(
                         tempImg,
                         -scaledWidth/2 + adjustedX,
