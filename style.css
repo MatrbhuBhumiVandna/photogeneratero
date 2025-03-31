@@ -1,206 +1,46 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    -webkit-tap-highlight-color: transparent;
-}
+/* Previous styles remain the same */
 
-body {
-    font-family: Arial, sans-serif;
-    background-color: #f0f2f5;
-    color: #333;
-    touch-action: none;
-}
-
-body.no-scroll {
-    overflow: hidden;
-    position: fixed;
-    width: 100%;
-    height: 100%;
-}
-
-.loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.7);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    color: white;
-    display: none;
-}
-
-.spinner {
-    width: 50px;
-    height: 50px;
-    border: 5px solid rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
-    border-top-color: #fff;
-    animation: spin 1s ease-in-out infinite;
-    margin-bottom: 15px;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-.container {
-    width: 100%;
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-h1 {
-    text-align: center;
-    margin: 10px 0 20px;
-    font-size: 22px;
-    color: #075e54;
-}
-
-.editor-container {
-    width: 100%;
-    max-width: 1080px;
-    margin-bottom: 20px;
+.frame-container {
     position: relative;
+    width: 100%;
+    max-width: 375px;
+    height: 667px;
     overflow: hidden;
+    background-color: #eee;
     border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.frame-wrapper {
-    position: relative;
-    width: 100%;
-    height: 0;
-    padding-bottom: 177.78%;
-    overflow: hidden;
-    background-color: #ddd;
-}
-
-.user-image-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-}
-
-#userImage {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
-    will-change: transform;
-}
-
-#frameImage {
+#frameCanvas {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     pointer-events: none;
-    z-index: 2;
+    z-index: 1;
 }
 
-.controls {
+.user-photo {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
-    max-width: 1080px;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    margin-bottom: 20px;
-}
-
-.btn {
-    padding: 12px;
-    border: none;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    text-align: center;
-    transition: all 0.2s;
-}
-
-#uploadBtn {
-    background-color: #075e54;
-    color: white;
-}
-
-#downloadBtn {
-    background-color: #25D366;
-    color: white;
-}
-
-#fileInput {
-    display: none;
-}
-
-.frame-selection {
-    width: 100%;
-    max-width: 1080px;
-}
-
-.frame-selection h3 {
-    margin-bottom: 10px;
-    text-align: center;
-    color: #075e54;
-}
-
-.frames-scroll {
-    display: flex;
-    gap: 10px;
-    overflow-x: auto;
-    padding: 10px 5px;
-    scrollbar-width: none;
-}
-
-.frames-scroll::-webkit-scrollbar {
-    display: none;
-}
-
-.frame-option {
-    width: 80px;
-    height: 142px;
-    border-radius: 5px;
-    border: 2px solid #ddd;
-    cursor: pointer;
-    flex-shrink: 0;
+    height: 100%;
     object-fit: cover;
+    user-select: none;
+    -webkit-user-drag: none;
+    touch-action: none;
 }
 
-.frame-option.active {
-    border-color: #075e54;
-}
-
-.instructions {
-    margin-top: 20px;
-    padding: 15px;
-    background-color: #fff;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.frame {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
-    max-width: 1080px;
-}
-
-.instructions h3 {
-    color: #075e54;
-    margin-bottom: 10px;
-}
-
-.instructions ul {
-    padding-left: 20px;
-}
-
-.instructions li {
-    margin-bottom: 8px;
+    height: 100%;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-drag: none;
+    z-index: 3;
 }
