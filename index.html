@@ -39,13 +39,16 @@
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             background-color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         
         .editor-container {
             position: relative;
-            width: 100%;
+            width: 80%; /* 20% smaller */
             height: 0;
-            padding-bottom: 177.78%; /* 16:9 aspect ratio */
+            padding-bottom: 142.22%; /* 16:9 aspect ratio for 80% width */
         }
         
         .editor-content {
@@ -61,6 +64,7 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
+            touch-action: none;
         }
         
         #user-photo {
@@ -71,7 +75,7 @@
             object-position: center;
             user-select: none;
             -webkit-user-select: none;
-            touch-action: none;
+            transform-origin: center center;
         }
         
         #frame {
@@ -80,29 +84,6 @@
             height: 100%;
             z-index: 2;
             pointer-events: none;
-        }
-        
-        /* Scrollable areas - adjust these to match your frame's non-white areas */
-        .scroll-area {
-            position: absolute;
-            background-color: rgba(0,0,0,0.01);
-            z-index: 3;
-            pointer-events: auto;
-        }
-        
-        /* Example scroll areas - customize these */
-        .top-scroll {
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 20%;
-        }
-        
-        .bottom-scroll {
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 20%;
         }
         
         .controls {
@@ -135,10 +116,6 @@
                         <img id="user-photo" src="default-user.png" alt="User Photo">
                     </div>
                     <img id="frame" src="frame.png" alt="Frame">
-                    
-                    <!-- Scrollable areas -->
-                    <div class="scroll-area top-scroll"></div>
-                    <div class="scroll-area bottom-scroll"></div>
                 </div>
             </div>
         </div>
@@ -161,11 +138,13 @@
             let currentScale = 1;
             let currentX = 0;
             let currentY = 0;
+            let currentRotation = 0;
             let initialDistance = null;
             let initialScale = 1;
-            let isDragging = false;
-            let startX = 0;
-            let startY = 0;
+            let initialAngle = 0;
+            let initialX = 0;
+            let initialY = 0;
+            let isPinching = false;
             
             // Upload photo
             uploadBtn.addEventListener('click', function() {
@@ -183,106 +162,133 @@
                 }
             });
             
-            // Download image
+            // Download image (outputs 1080x1920)
             downloadBtn.addEventListener('click', downloadImage);
             
             // Touch events
             photoContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
             photoContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
             photoContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
+            photoContainer.addEventListener('touchcancel', handleTouchEnd, { passive: true });
             
             function resetPhotoPosition() {
                 currentScale = 1;
                 currentX = 0;
                 currentY = 0;
+                currentRotation = 0;
                 applyTransform();
             }
             
             function handleTouchStart(e) {
-                if (e.touches.length === 1) {
-                    isDragging = true;
-                    startX = e.touches[0].clientX - currentX;
-                    startY = e.touches[0].clientY - currentY;
-                    e.preventDefault();
-                } else if (e.touches.length === 2) {
-                    isDragging = false;
+                if (e.touches.length === 2) {
+                    isPinching = true;
                     initialDistance = getDistance(
                         { x: e.touches[0].clientX, y: e.touches[0].clientY },
                         { x: e.touches[1].clientX, y: e.touches[1].clientY }
                     );
                     initialScale = currentScale;
+                    initialAngle = getAngle(
+                        { x: e.touches[0].clientX, y: e.touches[0].clientY },
+                        { x: e.touches[1].clientX, y: e.touches[1].clientY }
+                    );
+                    initialX = currentX;
+                    initialY = currentY;
                     e.preventDefault();
                 }
             }
             
             function handleTouchMove(e) {
-                if (isDragging && e.touches.length === 1) {
-                    currentX = e.touches[0].clientX - startX;
-                    currentY = e.touches[0].clientY - startY;
-                    
-                    // Limit movement
-                    const maxOffsetX = (userPhoto.width * currentScale - photoContainer.offsetWidth) / 2;
-                    const maxOffsetY = (userPhoto.height * currentScale - photoContainer.offsetHeight) / 2;
-                    
-                    currentX = Math.max(-maxOffsetX, Math.min(maxOffsetX, currentX));
-                    currentY = Math.max(-maxOffsetY, Math.min(maxOffsetY, currentY));
-                    
-                    applyTransform();
-                    e.preventDefault();
-                } else if (!isDragging && e.touches.length === 2) {
+                if (isPinching && e.touches.length === 2) {
+                    // Calculate scale
                     const currentDistance = getDistance(
                         { x: e.touches[0].clientX, y: e.touches[0].clientY },
                         { x: e.touches[1].clientX, y: e.touches[1].clientY }
                     );
+                    currentScale = initialScale * (currentDistance / initialDistance);
+                    currentScale = Math.max(0.5, Math.min(3, currentScale));
                     
-                    if (initialDistance !== null) {
-                        currentScale = initialScale * (currentDistance / initialDistance);
-                        currentScale = Math.max(0.5, Math.min(3, currentScale));
-                        applyTransform();
-                    }
+                    // Calculate rotation
+                    const currentAngle = getAngle(
+                        { x: e.touches[0].clientX, y: e.touches[0].clientY },
+                        { x: e.touches[1].clientX, y: e.touches[1].clientY }
+                    );
+                    currentRotation = currentAngle - initialAngle;
+                    
+                    // Calculate movement (average of both touches)
+                    const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                    const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                    
+                    // Get the initial center point (approximation)
+                    const initialCenterX = centerX - (currentX - initialX);
+                    const initialCenterY = centerY - (currentY - initialY);
+                    
+                    currentX = centerX - initialCenterX;
+                    currentY = centerY - initialCenterY;
+                    
+                    applyTransform();
                     e.preventDefault();
                 }
             }
             
             function handleTouchEnd(e) {
-                isDragging = false;
-                initialDistance = null;
+                if (e.touches.length < 2) {
+                    isPinching = false;
+                }
             }
             
             function getDistance(touch1, touch2) {
                 return Math.sqrt(Math.pow(touch2.x - touch1.x, 2) + Math.pow(touch2.y - touch1.y, 2));
             }
             
+            function getAngle(touch1, touch2) {
+                return Math.atan2(touch2.y - touch1.y, touch2.x - touch1.x) * 180 / Math.PI;
+            }
+            
             function applyTransform() {
-                userPhoto.style.transform = `translate(${currentX}px, ${currentY}px) scale(${currentScale})`;
+                userPhoto.style.transform = `
+                    translate(${currentX}px, ${currentY}px)
+                    scale(${currentScale})
+                    rotate(${currentRotation}deg)
+                `;
             }
             
             function downloadImage() {
                 const canvas = document.createElement('canvas');
-                const container = document.querySelector('.editor-container');
                 canvas.width = 1080;
                 canvas.height = 1920;
                 const ctx = canvas.getContext('2d');
                 
                 const tempImg = new Image();
                 tempImg.onload = function() {
+                    // Calculate dimensions with all transformations
                     const scaledWidth = tempImg.width * currentScale;
                     const scaledHeight = tempImg.height * currentScale;
                     
+                    // Draw white background
                     ctx.fillStyle = '#ffffff';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                     
+                    // Save context, rotate, then draw image
+                    ctx.save();
+                    ctx.translate(canvas.width/2, canvas.height/2);
+                    ctx.rotate(currentRotation * Math.PI / 180);
+                    
                     ctx.drawImage(
                         tempImg,
-                        (canvas.width - scaledWidth) / 2 + currentX,
-                        (canvas.height - scaledHeight) / 2 + currentY,
+                        -scaledWidth/2 + currentX,
+                        -scaledHeight/2 + currentY,
                         scaledWidth,
                         scaledHeight
                     );
                     
+                    ctx.restore();
+                    
+                    // Draw frame
                     const frameImg = new Image();
                     frameImg.onload = function() {
                         ctx.drawImage(frameImg, 0, 0, canvas.width, canvas.height);
+                        
+                        // Download
                         const link = document.createElement('a');
                         link.download = 'framed-photo.png';
                         link.href = canvas.toDataURL('image/png');
