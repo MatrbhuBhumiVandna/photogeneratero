@@ -3,52 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WhatsApp Status Frame Editor</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Photo Frame Editor</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="spinner"></div>
-        <p>Processing image...</p>
-    </div>
-
     <div class="container">
-        <h1>WhatsApp Status Frame Editor</h1>
+        <h1>Photo Frame Editor</h1>
         
-        <div class="editor-container">
-            <div class="frame-wrapper">
-                <div class="user-image-container" id="imageContainer">
-                    <img id="userImage" src="images/default-user.png" alt="Your photo">
+        <div class="editor-area">
+            <div class="frame-container" id="frameContainer">
+                <!-- We'll handle the transparent area detection in JavaScript -->
+                <canvas id="frameCanvas"></canvas>
+                <img src="default-user.png" alt="User Photo" class="user-photo" id="userPhoto">
+                <img src="frames/frame1.png" alt="Frame" class="frame" id="frame">
+            </div>
+            
+            <div class="controls">
+                <input type="file" id="photoUpload" accept="image/*" class="hidden">
+                <button id="uploadBtn" class="btn">Upload Photo</button>
+                <button id="downloadBtn" class="btn">Download</button>
+            </div>
+            
+            <div class="frame-selection">
+                <h3>Select Frame:</h3>
+                <div class="frames" id="frames">
+                    <!-- Frames will be added here by JavaScript -->
                 </div>
-                <img id="frameImage" src="frames/frame1.png" alt="Frame">
             </div>
-        </div>
-        
-        <div class="controls">
-            <input type="file" id="fileInput" accept="image/*">
-            <button class="btn" id="uploadBtn">Upload Photo</button>
-            <button class="btn" id="downloadBtn">Download Status</button>
-        </div>
-        
-        <div class="frame-selection">
-            <h3>Select Frame:</h3>
-            <div class="frames-scroll" id="framesScroll">
-                <!-- Frames will be added here by JavaScript -->
-            </div>
-        </div>
-        
-        <div class="instructions">
-            <h3>How to Use:</h3>
-            <ul>
-                <li>Upload your photo</li>
-                <li>Drag with one finger to position</li>
-                <li>Pinch with two fingers to zoom</li>
-                <li>Select different frames below</li>
-                <li>Download when ready</li>
-            </ul>
         </div>
     </div>
-
+    
     <script src="script.js"></script>
 </body>
 </html>
