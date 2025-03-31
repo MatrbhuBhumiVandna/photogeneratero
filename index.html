@@ -4,35 +4,333 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Photo Frame Editor</title>
-    <link rel="stylesheet" href="styles.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: none;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            margin-bottom: 20px;
+            color: #333;
+            text-align: center;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1080px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .editor-container {
+            position: relative;
+            width: 100%;
+            max-width: 1080px;
+            height: 1920px;
+            max-height: calc(100vh - 200px);
+            aspect-ratio: 9/16;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            border-radius: 8px;
+        }
+        
+        #photo-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        #user-photo {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        #frame {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            max-width: 500px;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .btn:hover {
+            background-color: #45a049;
+        }
+        
+        .btn-upload {
+            background-color: #2196F3;
+        }
+        
+        .btn-upload:hover {
+            background-color: #0b7dda;
+        }
+        
+        .instructions {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+        
+        .instructions h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .instructions ul {
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+            color: #555;
+        }
+        
+        @media (max-width: 600px) {
+            .editor-container {
+                height: calc(100vw * 16 / 9);
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <h1>Photo Frame Editor</h1>
         
-        <div class="editor-area">
-            <div class="frame-container" id="frameContainer">
-                <!-- We'll handle the transparent area detection in JavaScript -->
-                <canvas id="frameCanvas"></canvas>
-                <img src="default-user.png" alt="User Photo" class="user-photo" id="userPhoto">
-                <img src="frames/frame1.png" alt="Frame" class="frame" id="frame">
+        <div class="editor-container">
+            <div id="photo-container">
+                <img id="user-photo" src="default-user.png" alt="User Photo">
             </div>
-            
-            <div class="controls">
-                <input type="file" id="photoUpload" accept="image/*" class="hidden">
-                <button id="uploadBtn" class="btn">Upload Photo</button>
-                <button id="downloadBtn" class="btn">Download</button>
-            </div>
-            
-            <div class="frame-selection">
-                <h3>Select Frame:</h3>
-                <div class="frames" id="frames">
-                    <!-- Frames will be added here by JavaScript -->
-                </div>
-            </div>
+            <img id="frame" src="frame.png" alt="Frame">
+        </div>
+        
+        <div class="controls">
+            <input type="file" id="photo-upload" accept="image/*" style="display: none;">
+            <button class="btn btn-upload" id="upload-btn">Upload Photo</button>
+            <button class="btn" id="download-btn">Download Image</button>
+        </div>
+        
+        <div class="instructions">
+            <h3>How to Use:</h3>
+            <ul>
+                <li>Upload your photo using the button above</li>
+                <li>Drag with one finger to position the photo</li>
+                <li>Pinch with two fingers to zoom in/out</li>
+                <li>Download when ready</li>
+            </ul>
         </div>
     </div>
-    
-    <script src="script.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const photoUpload = document.getElementById('photo-upload');
+            const uploadBtn = document.getElementById('upload-btn');
+            const downloadBtn = document.getElementById('download-btn');
+            const userPhoto = document.getElementById('user-photo');
+            const frame = document.getElementById('frame');
+            const photoContainer = document.getElementById('photo-container');
+            const editorContainer = document.querySelector('.editor-container');
+            
+            let currentScale = 1;
+            let currentX = 0;
+            let currentY = 0;
+            let initialDistance = null;
+            let initialScale = 1;
+            
+            // Upload photo
+            uploadBtn.addEventListener('click', function() {
+                photoUpload.click();
+            });
+            
+            photoUpload.addEventListener('change', function(e) {
+                if (e.target.files && e.target.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        userPhoto.src = event.target.result;
+                        // Reset position and scale when new photo is uploaded
+                        currentScale = 1;
+                        currentX = 0;
+                        currentY = 0;
+                        applyTransform();
+                    };
+                    reader.readAsDataURL(e.target.files[0]);
+                }
+            });
+            
+            // Download image
+            downloadBtn.addEventListener('click', function() {
+                // Create a canvas with the same dimensions as the editor
+                const canvas = document.createElement('canvas');
+                canvas.width = 1080;
+                canvas.height = 1920;
+                const ctx = canvas.getContext('2d');
+                
+                // Draw the user photo with current transform
+                const tempImg = new Image();
+                tempImg.onload = function() {
+                    // Calculate the transformed dimensions and position
+                    const scaledWidth = tempImg.width * currentScale;
+                    const scaledHeight = tempImg.height * currentScale;
+                    
+                    // Draw the background (white in case of transparent areas)
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    // Draw the transformed image
+                    ctx.drawImage(
+                        tempImg,
+                        (canvas.width - scaledWidth) / 2 + currentX,
+                        (canvas.height - scaledHeight) / 2 + currentY,
+                        scaledWidth,
+                        scaledHeight
+                    );
+                    
+                    // Load the frame and draw it on top
+                    const frameImg = new Image();
+                    frameImg.onload = function() {
+                        ctx.drawImage(frameImg, 0, 0, canvas.width, canvas.height);
+                        
+                        // Convert canvas to image and download
+                        const dataURL = canvas.toDataURL('image/png');
+                        const link = document.createElement('a');
+                        link.download = 'framed-photo.png';
+                        link.href = dataURL;
+                        link.click();
+                    };
+                    frameImg.src = frame.src;
+                };
+                tempImg.src = userPhoto.src;
+            });
+            
+            // Touch event handlers
+            editorContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
+            editorContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+            editorContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
+            
+            function handleTouchStart(e) {
+                e.preventDefault();
+                if (e.touches.length === 1) {
+                    // Single touch - prepare for drag
+                } else if (e.touches.length === 2) {
+                    // Two touches - prepare for pinch zoom
+                    initialDistance = getDistance(
+                        e.touches[0].clientX, e.touches[0].clientY,
+                        e.touches[1].clientX, e.touches[1].clientY
+                    );
+                    initialScale = currentScale;
+                }
+            }
+            
+            function handleTouchMove(e) {
+                e.preventDefault();
+                if (e.touches.length === 1) {
+                    // Single touch - drag
+                    const touch = e.touches[0];
+                    const rect = editorContainer.getBoundingClientRect();
+                    const containerCenterX = rect.width / 2;
+                    const containerCenterY = rect.height / 2;
+                    
+                    // Calculate position relative to center
+                    const touchX = touch.clientX - rect.left;
+                    const touchY = touch.clientY - rect.top;
+                    
+                    // Update position (limited to prevent moving too far)
+                    const maxOffsetX = (userPhoto.width * currentScale - rect.width) / 2;
+                    const maxOffsetY = (userPhoto.height * currentScale - rect.height) / 2;
+                    
+                    if (maxOffsetX > 0) {
+                        currentX = (touchX - containerCenterX) * 2;
+                        currentX = Math.max(-maxOffsetX, Math.min(maxOffsetX, currentX));
+                    } else {
+                        currentX = 0;
+                    }
+                    
+                    if (maxOffsetY > 0) {
+                        currentY = (touchY - containerCenterY) * 2;
+                        currentY = Math.max(-maxOffsetY, Math.min(maxOffsetY, currentY));
+                    } else {
+                        currentY = 0;
+                    }
+                    
+                    applyTransform();
+                } else if (e.touches.length === 2 && initialDistance !== null) {
+                    // Two touches - pinch zoom
+                    const currentDistance = getDistance(
+                        e.touches[0].clientX, e.touches[0].clientY,
+                        e.touches[1].clientX, e.touches[1].clientY
+                    );
+                    
+                    // Calculate scale factor
+                    const scaleFactor = currentDistance / initialDistance;
+                    currentScale = initialScale * scaleFactor;
+                    
+                    // Limit scale
+                    currentScale = Math.max(0.5, Math.min(3, currentScale));
+                    
+                    applyTransform();
+                }
+            }
+            
+            function handleTouchEnd(e) {
+                e.preventDefault();
+                initialDistance = null;
+            }
+            
+            function getDistance(x1, y1, x2, y2) {
+                return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+            }
+            
+            function applyTransform() {
+                userPhoto.style.transform = `translate(${currentX}px, ${currentY}px) scale(${currentScale})`;
+            }
+        });
+    </script>
 </body>
 </html>
