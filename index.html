@@ -20,7 +20,6 @@
             padding: 20px;
             min-height: 100vh;
             overflow-y: auto;
-            touch-action: pan-y;
         }
         
         h1 {
@@ -38,24 +37,22 @@
             gap: 20px;
         }
         
-        .editor-wrapper {
+        .editor-scroll-container {
             width: 100%;
-            max-width: 1080px;
-            height: 1920px;
             max-height: 80vh;
-            aspect-ratio: 9/16;
             overflow: auto;
-            touch-action: pan-y;
             -webkit-overflow-scrolling: touch;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             background-color: #fff;
+            touch-action: pan-y;
         }
         
         .editor-container {
             position: relative;
             width: 1080px;
             height: 1920px;
+            max-width: 100%;
             touch-action: none;
         }
         
@@ -92,6 +89,7 @@
             gap: 15px;
             width: 100%;
             max-width: 500px;
+            touch-action: pan-y;
         }
         
         .btn {
@@ -103,6 +101,7 @@
             font-size: 16px;
             cursor: pointer;
             transition: background-color 0.3s;
+            touch-action: manipulation;
         }
         
         .btn:hover {
@@ -124,6 +123,7 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             width: 100%;
             max-width: 500px;
+            touch-action: pan-y;
         }
         
         .instructions h3 {
@@ -140,10 +140,17 @@
             color: #555;
         }
         
-        @media (max-width: 600px) {
-            .editor-wrapper {
-                height: calc(100vw * 16 / 9);
-                max-height: 70vh;
+        @media (max-width: 1080px) {
+            .editor-scroll-container {
+                width: 100%;
+                height: auto;
+                max-height: 80vh;
+            }
+            
+            .editor-container {
+                width: 100%;
+                height: auto;
+                aspect-ratio: 9/16;
             }
             
             h1 {
@@ -156,7 +163,7 @@
     <div class="container">
         <h1>Photo Frame Editor</h1>
         
-        <div class="editor-wrapper" id="editor-wrapper">
+        <div class="editor-scroll-container" id="scroll-container">
             <div class="editor-container">
                 <div id="photo-container">
                     <img id="user-photo" src="default-user.png" alt="User Photo">
@@ -177,7 +184,7 @@
                 <li>Upload your photo using the button above</li>
                 <li>Drag with one finger to position the photo</li>
                 <li>Pinch with two fingers to zoom in/out</li>
-                <li>Scroll empty frame areas with one finger</li>
+                <li>Scroll empty areas of the frame with one finger</li>
                 <li>Download when ready</li>
             </ul>
         </div>
@@ -191,7 +198,7 @@
             const userPhoto = document.getElementById('user-photo');
             const frame = document.getElementById('frame');
             const photoContainer = document.getElementById('photo-container');
-            const editorWrapper = document.getElementById('editor-wrapper');
+            const scrollContainer = document.getElementById('scroll-container');
             const editorContainer = document.querySelector('.editor-container');
             
             let currentScale = 1;
@@ -203,6 +210,13 @@
             let startX = 0;
             let startY = 0;
             let touchStartTime = 0;
+            let isInteractingWithPhoto = false;
+            
+            // Set initial photo container size
+            function setPhotoContainerSize() {
+                photoContainer.style.width = editorContainer.offsetWidth + 'px';
+                photoContainer.style.height = editorContainer.offsetHeight + 'px';
+            }
             
             // Upload photo
             uploadBtn.addEventListener('click', function() {
@@ -269,32 +283,45 @@
                 tempImg.src = userPhoto.src;
             });
             
+            // Handle window resize
+            window.addEventListener('resize', setPhotoContainerSize);
+            
+            // Set initial size
+            setPhotoContainerSize();
+            
             // Touch event handlers
             photoContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
             photoContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
-            photoContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
+            photoContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
+            photoContainer.addEventListener('touchcancel', handleTouchEnd, { passive: true });
             
             function handleTouchStart(e) {
-                touchStartTime = Date.now();
-                
-                if (e.touches.length === 1) {
-                    // Single touch - prepare for drag
-                    isDraggingPhoto = true;
-                    startX = e.touches[0].clientX - currentX;
-                    startY = e.touches[0].clientY - currentY;
-                } else if (e.touches.length === 2) {
-                    // Two touches - prepare for pinch zoom
-                    isDraggingPhoto = false;
-                    initialDistance = getDistance(
-                        e.touches[0].clientX, e.touches[0].clientY,
-                        e.touches[1].clientX, e.touches[1].clientY
-                    );
-                    initialScale = currentScale;
+                // Only handle touches on the photo container
+                if (e.target === photoContainer || e.target === userPhoto) {
+                    isInteractingWithPhoto = true;
+                    touchStartTime = Date.now();
+                    
+                    if (e.touches.length === 1) {
+                        // Single touch - prepare for drag
+                        isDraggingPhoto = true;
+                        startX = e.touches[0].clientX - currentX;
+                        startY = e.touches[0].clientY - currentY;
+                    } else if (e.touches.length === 2) {
+                        // Two touches - prepare for pinch zoom
+                        isDraggingPhoto = false;
+                        initialDistance = getDistance(
+                            e.touches[0].clientX, e.touches[0].clientY,
+                            e.touches[1].clientX, e.touches[1].clientY
+                        );
+                        initialScale = currentScale;
+                    }
+                    e.preventDefault();
                 }
-                e.preventDefault();
             }
             
             function handleTouchMove(e) {
+                if (!isInteractingWithPhoto) return;
+                
                 // Check if this is a quick tap (should allow scroll)
                 const isQuickTap = (Date.now() - touchStartTime) < 200;
                 
@@ -338,13 +365,12 @@
                     applyTransform();
                     e.preventDefault();
                 }
-                // Allow default behavior (scrolling) for other cases
             }
             
             function handleTouchEnd(e) {
+                isInteractingWithPhoto = false;
                 isDraggingPhoto = false;
                 initialDistance = null;
-                e.preventDefault();
             }
             
             function getDistance(x1, y1, x2, y2) {
