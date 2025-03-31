@@ -43,9 +43,17 @@
         
         .editor-container {
             position: relative;
-            width: 1080px;
-            height: 1920px;
-            max-width: 100%;
+            width: 100%;
+            height: 0;
+            padding-bottom: 177.78%; /* 16:9 aspect ratio */
+        }
+        
+        .editor-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
         }
         
         #photo-container {
@@ -71,18 +79,18 @@
             width: 100%;
             height: 100%;
             z-index: 2;
-            pointer-events: none; /* Frame itself doesn't intercept touches */
+            pointer-events: none;
         }
         
-        /* Interactive areas - modify these coordinates to match your frame's non-white areas */
+        /* Scrollable areas - adjust these to match your frame's non-white areas */
         .scroll-area {
             position: absolute;
-            background-color: rgba(0,0,0,0.01); /* Nearly transparent */
+            background-color: rgba(0,0,0,0.01);
             z-index: 3;
             pointer-events: auto;
         }
         
-        /* Example scroll areas - adjust these to match your frame */
+        /* Example scroll areas - customize these */
         .top-scroll {
             top: 0;
             left: 0;
@@ -97,18 +105,22 @@
             height: 20%;
         }
         
-        .left-scroll {
-            top: 20%;
-            left: 0;
-            width: 20%;
-            height: 60%;
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            max-width: 500px;
         }
         
-        .right-scroll {
-            top: 20%;
-            right: 0;
-            width: 20%;
-            height: 60%;
+        .btn {
+            padding: 12px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -116,18 +128,18 @@
     <div class="container">
         <h1>Photo Frame Editor</h1>
         
-        <div class="editor-scroll-container" id="scroll-container">
+        <div class="editor-scroll-container">
             <div class="editor-container">
-                <div id="photo-container">
-                    <img id="user-photo" src="default-user.png" alt="User Photo">
+                <div class="editor-content">
+                    <div id="photo-container">
+                        <img id="user-photo" src="default-user.png" alt="User Photo">
+                    </div>
+                    <img id="frame" src="frame.png" alt="Frame">
+                    
+                    <!-- Scrollable areas -->
+                    <div class="scroll-area top-scroll"></div>
+                    <div class="scroll-area bottom-scroll"></div>
                 </div>
-                <img id="frame" src="frame.png" alt="Frame">
-                
-                <!-- Scrollable areas (adjust to match your frame's non-white areas) -->
-                <div class="scroll-area top-scroll"></div>
-                <div class="scroll-area bottom-scroll"></div>
-                <div class="scroll-area left-scroll"></div>
-                <div class="scroll-area right-scroll"></div>
             </div>
         </div>
         
@@ -145,7 +157,6 @@
             const downloadBtn = document.getElementById('download-btn');
             const userPhoto = document.getElementById('user-photo');
             const photoContainer = document.getElementById('photo-container');
-            const scrollContainer = document.getElementById('scroll-container');
             
             let currentScale = 1;
             let currentX = 0;
@@ -155,7 +166,6 @@
             let isDragging = false;
             let startX = 0;
             let startY = 0;
-            let startTouches = [];
             
             // Upload photo
             uploadBtn.addEventListener('click', function() {
@@ -176,7 +186,7 @@
             // Download image
             downloadBtn.addEventListener('click', downloadImage);
             
-            // Touch events for photo manipulation
+            // Touch events
             photoContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
             photoContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
             photoContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
@@ -190,19 +200,16 @@
             
             function handleTouchStart(e) {
                 if (e.touches.length === 1) {
-                    // Single touch - prepare for drag
                     isDragging = true;
                     startX = e.touches[0].clientX - currentX;
                     startY = e.touches[0].clientY - currentY;
                     e.preventDefault();
                 } else if (e.touches.length === 2) {
-                    // Two touches - prepare for pinch zoom
                     isDragging = false;
-                    startTouches = [
+                    initialDistance = getDistance(
                         { x: e.touches[0].clientX, y: e.touches[0].clientY },
                         { x: e.touches[1].clientX, y: e.touches[1].clientY }
-                    ];
-                    initialDistance = getDistance(startTouches[0], startTouches[1]);
+                    );
                     initialScale = currentScale;
                     e.preventDefault();
                 }
@@ -210,11 +217,10 @@
             
             function handleTouchMove(e) {
                 if (isDragging && e.touches.length === 1) {
-                    // Single finger drag
                     currentX = e.touches[0].clientX - startX;
                     currentY = e.touches[0].clientY - startY;
                     
-                    // Limit movement based on scale
+                    // Limit movement
                     const maxOffsetX = (userPhoto.width * currentScale - photoContainer.offsetWidth) / 2;
                     const maxOffsetY = (userPhoto.height * currentScale - photoContainer.offsetHeight) / 2;
                     
@@ -224,12 +230,10 @@
                     applyTransform();
                     e.preventDefault();
                 } else if (!isDragging && e.touches.length === 2) {
-                    // Two finger pinch zoom
-                    const currentTouches = [
+                    const currentDistance = getDistance(
                         { x: e.touches[0].clientX, y: e.touches[0].clientY },
                         { x: e.touches[1].clientX, y: e.touches[1].clientY }
-                    ];
-                    const currentDistance = getDistance(currentTouches[0], currentTouches[1]);
+                    );
                     
                     if (initialDistance !== null) {
                         currentScale = initialScale * (currentDistance / initialDistance);
@@ -246,10 +250,7 @@
             }
             
             function getDistance(touch1, touch2) {
-                return Math.sqrt(
-                    Math.pow(touch2.x - touch1.x, 2) + 
-                    Math.pow(touch2.y - touch1.y, 2)
-                );
+                return Math.sqrt(Math.pow(touch2.x - touch1.x, 2) + Math.pow(touch2.y - touch1.y, 2));
             }
             
             function applyTransform() {
@@ -257,8 +258,39 @@
             }
             
             function downloadImage() {
-                // Implementation remains the same as previous versions
-                // ... (omitted for brevity)
+                const canvas = document.createElement('canvas');
+                const container = document.querySelector('.editor-container');
+                canvas.width = 1080;
+                canvas.height = 1920;
+                const ctx = canvas.getContext('2d');
+                
+                const tempImg = new Image();
+                tempImg.onload = function() {
+                    const scaledWidth = tempImg.width * currentScale;
+                    const scaledHeight = tempImg.height * currentScale;
+                    
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    ctx.drawImage(
+                        tempImg,
+                        (canvas.width - scaledWidth) / 2 + currentX,
+                        (canvas.height - scaledHeight) / 2 + currentY,
+                        scaledWidth,
+                        scaledHeight
+                    );
+                    
+                    const frameImg = new Image();
+                    frameImg.onload = function() {
+                        ctx.drawImage(frameImg, 0, 0, canvas.width, canvas.height);
+                        const link = document.createElement('a');
+                        link.download = 'framed-photo.png';
+                        link.href = canvas.toDataURL('image/png');
+                        link.click();
+                    };
+                    frameImg.src = document.getElementById('frame').src;
+                };
+                tempImg.src = userPhoto.src;
             }
         });
     </script>
