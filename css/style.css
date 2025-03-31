@@ -5,35 +5,33 @@ body {
 
 .frame-container {
     position: relative;
-    width: 100%;
-    max-width: 600px;
+    width: 270px;
+    height: 480px;
     margin: 0 auto;
+    border: 1px solid #ddd;
+    background-color: #fff;
 }
 
 .frame-image {
     width: 100%;
-    display: block;
+    height: 100%;
+    object-fit: contain;
 }
 
 .photo-container {
     position: absolute;
-    top: 20%;
-    left: 25%;
-    width: 50%;
+    top: 25%;
+    left: 15%;
+    width: 70%;
     height: 50%;
     overflow: hidden;
+    background-color: #f0f0f0;
 }
 
 .photo-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
-}
-
-.frame-options {
-    display: flex;
-    gap: 10px;
-    margin-top: 15px;
 }
 
 .frame-option {
@@ -54,6 +52,14 @@ body {
     object-fit: cover;
 }
 
-#downloadBtn {
-    margin-top: 20px;
+@media (min-width: 768px) {
+    .frame-container {
+        width: 540px;
+        height: 960px;
+    }
+    
+    .frame-option {
+        width: 100px;
+        height: 100px;
+    }
 }
