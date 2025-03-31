@@ -3,58 +3,409 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WhatsApp Status Frame Maker</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="css/style.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>WhatsApp Status Frame Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            touch-action: none;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            width: 100%;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        h1 {
+            text-align: center;
+            margin: 10px 0 20px;
+            font-size: 22px;
+            color: #075e54; /* WhatsApp green */
+        }
+        
+        .editor-container {
+            width: 100%;
+            max-width: 1080px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .frame-wrapper {
+            position: relative;
+            width: 100%;
+            height: 0;
+            padding-bottom: 177.78%; /* 9:16 aspect ratio (1080x1920) */
+            overflow: hidden;
+            background-color: #ddd;
+        }
+        
+        .user-image-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        #userImage {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            will-change: transform;
+        }
+        
+        #frameImage {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+        
+        .controls {
+            width: 100%;
+            max-width: 1080px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        
+        #uploadBtn {
+            background-color: #075e54;
+            color: white;
+        }
+        
+        #downloadBtn {
+            background-color: #25D366;
+            color: white;
+        }
+        
+        #fileInput {
+            display: none;
+        }
+        
+        .frame-selection {
+            width: 100%;
+            max-width: 1080px;
+        }
+        
+        .frame-selection h3 {
+            margin-bottom: 10px;
+            text-align: center;
+            color: #075e54;
+        }
+        
+        .frames-scroll {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 10px 5px;
+            scrollbar-width: none; /* Firefox */
+        }
+        
+        .frames-scroll::-webkit-scrollbar {
+            display: none; /* Chrome/Safari */
+        }
+        
+        .frame-option {
+            width: 80px;
+            height: 142px;
+            border-radius: 5px;
+            border: 2px solid #ddd;
+            cursor: pointer;
+            flex-shrink: 0;
+            object-fit: cover;
+        }
+        
+        .frame-option.active {
+            border-color: #075e54;
+        }
+        
+        .instructions {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 1080px;
+        }
+        
+        .instructions h3 {
+            color: #075e54;
+            margin-bottom: 10px;
+        }
+        
+        .instructions ul {
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+    </style>
 </head>
 <body>
-    <div class="container py-2">
-        <h4 class="text-center mb-3">Status Frame Maker</h4>
+    <div class="container">
+        <h1>WhatsApp Status Frame Editor</h1>
         
-        <div class="row">
-            <!-- Preview Area -->
-            <div class="col-12 mb-3">
-                <div class="frame-preview-container">
-                    <div class="photo-background">
-                        <img id="userPhoto" src="assets/default-user.png" class="user-photo">
-                    </div>
-                    <img id="selectedFrame" src="frames/frame1.png" class="frame-overlay">
+        <div class="editor-container">
+            <div class="frame-wrapper">
+                <div class="user-image-container" id="imageContainer">
+                    <img id="userImage" src="default-user.png" alt="Your photo">
                 </div>
-            </div>
-            
-            <!-- Controls -->
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-body p-2">
-                        <!-- Visible Upload Button -->
-                        <label for="photoUpload" class="upload-btn mb-2">
-                            <img src="assets/upload-icon.png" class="upload-icon">
-                            Upload Photo
-                            <input type="file" id="photoUpload" accept="image/*">
-                        </label>
-                        
-                        <div class="frame-options mb-2">
-                            <div class="frame-option active" data-frame="frames/frame1.png">
-                                <img src="frames/frame1.png" alt="Frame 1">
-                            </div>
-                            <div class="frame-option" data-frame="frames/frame2.png">
-                                <img src="frames/frame2.png" alt="Frame 2">
-                            </div>
-                            <div class="frame-option" data-frame="frames/frame3.png">
-                                <img src="frames/frame3.png" alt="Frame 3">
-                            </div>
-                        </div>
-                        
-                        <button id="downloadBtn" class="btn btn-success w-100">
-                            <i class="fas fa-download"></i> Download Photo
-                        </button>
-                    </div>
-                </div>
+                <img id="frameImage" src="frames/frame1.png" alt="Frame">
             </div>
         </div>
+        
+        <div class="controls">
+            <input type="file" id="fileInput" accept="image/*">
+            <button class="btn" id="uploadBtn">Upload Photo</button>
+            <button class="btn" id="downloadBtn">Download Status</button>
+        </div>
+        
+        <div class="frame-selection">
+            <h3>Select Frame:</h3>
+            <div class="frames-scroll" id="framesScroll">
+                <!-- Frames will be added here by JavaScript -->
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h3>How to Use:</h3>
+            <ul>
+                <li>Upload your photo</li>
+                <li>Drag with one finger to position the photo</li>
+                <li>Pinch with two fingers to zoom in/out</li>
+                <li>Select different frames from the bottom</li>
+                <li>Download when ready</li>
+            </ul>
+        </div>
     </div>
-
-    <script src="js/script.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elements
+            const fileInput = document.getElementById('fileInput');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const userImage = document.getElementById('userImage');
+            const frameImage = document.getElementById('frameImage');
+            const imageContainer = document.getElementById('imageContainer');
+            const framesScroll = document.getElementById('framesScroll');
+            
+            // Frame options (replace with your actual frame paths)
+            const frameOptions = [
+                'frames/frame1.png',
+                'frames/frame2.png',
+                'frames/frame3.png',
+                'frames/frame4.png',
+                'frames/frame5.png'
+            ];
+            
+            // Variables for touch gestures
+            let initialScale = 1;
+            let currentScale = 1;
+            let initialDistance = 0;
+            let posX = 0;
+            let posY = 0;
+            let initialX = 0;
+            let initialY = 0;
+            let isDragging = false;
+            
+            // Initialize frame options
+            frameOptions.forEach((frame, index) => {
+                const frameOption = document.createElement('img');
+                frameOption.src = frame;
+                frameOption.classList.add('frame-option');
+                frameOption.dataset.index = index;
+                
+                // Set first frame as active by default
+                if (index === 0) {
+                    frameOption.classList.add('active');
+                }
+                
+                frameOption.addEventListener('click', function() {
+                    // Remove active class from all frames
+                    document.querySelectorAll('.frame-option').forEach(f => {
+                        f.classList.remove('active');
+                    });
+                    
+                    // Add active class to clicked frame
+                    this.classList.add('active');
+                    
+                    // Change frame
+                    frameImage.src = this.src;
+                });
+                
+                framesScroll.appendChild(frameOption);
+            });
+            
+            // Upload button click event
+            uploadBtn.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            // File input change event
+            fileInput.addEventListener('change', function(e) {
+                if (e.target.files && e.target.files[0]) {
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(event) {
+                        userImage.src = event.target.result;
+                        // Reset position and scale when new image is loaded
+                        resetImagePosition();
+                    };
+                    
+                    reader.readAsDataURL(e.target.files[0]);
+                }
+            });
+            
+            // Download button click event
+            downloadBtn.addEventListener('click', function() {
+                // Create a canvas with the exact dimensions of our frame
+                const canvas = document.createElement('canvas');
+                canvas.width = 1080;
+                canvas.height = 1920;
+                const ctx = canvas.getContext('2d');
+                
+                // Create temporary images to ensure they're loaded
+                const userImg = new Image();
+                const frameImg = new Image();
+                
+                userImg.src = userImage.src;
+                frameImg.src = frameImage.src;
+                
+                Promise.all([
+                    new Promise((resolve) => { userImg.onload = resolve; }),
+                    new Promise((resolve) => { frameImg.onload = resolve; })
+                ]).then(() => {
+                    // Draw the user image with current transformations
+                    ctx.save();
+                    
+                    // Calculate transformations based on current CSS transforms
+                    const transform = window.getComputedStyle(userImage).transform;
+                    const matrix = transform !== 'none' ? transform.match(/^matrix\((.+)\)$/)[1].split(/, /).map(Number) : [1, 0, 0, 1, 0, 0];
+                    
+                    // Apply transformations to canvas
+                    ctx.setTransform(matrix[0], matrix[1], matrix[2], matrix[3], matrix[4] + 540, matrix[5] + 960);
+                    
+                    // Draw the image centered
+                    ctx.drawImage(userImg, -userImg.width/2, -userImg.height/2, userImg.width, userImg.height);
+                    ctx.restore();
+                    
+                    // Draw the frame on top
+                    ctx.drawImage(frameImg, 0, 0, 1080, 1920);
+                    
+                    // Convert canvas to image and download
+                    const link = document.createElement('a');
+                    link.download = 'whatsapp-status.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                });
+            });
+            
+            // Touch gesture handlers
+            imageContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
+            imageContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+            imageContainer.addEventListener('touchend', handleTouchEnd);
+            
+            function handleTouchStart(e) {
+                e.preventDefault();
+                
+                if (e.touches.length === 1) {
+                    // Single touch - prepare for dragging
+                    isDragging = true;
+                    initialX = e.touches[0].clientX - posX;
+                    initialY = e.touches[0].clientY - posY;
+                } else if (e.touches.length === 2) {
+                    // Two touches - prepare for pinch zoom
+                    isDragging = false;
+                    initialDistance = getDistance(
+                        e.touches[0].clientX, e.touches[0].clientY,
+                        e.touches[1].clientX, e.touches[1].clientY
+                    );
+                    initialScale = currentScale;
+                }
+            }
+            
+            function handleTouchMove(e) {
+                e.preventDefault();
+                
+                if (e.touches.length === 1 && isDragging) {
+                    // Single touch - dragging
+                    posX = e.touches[0].clientX - initialX;
+                    posY = e.touches[0].clientY - initialY;
+                    updateImageTransform();
+                } else if (e.touches.length === 2) {
+                    // Two touches - pinch zoom
+                    isDragging = false;
+                    const currentDistance = getDistance(
+                        e.touches[0].clientX, e.touches[0].clientY,
+                        e.touches[1].clientX, e.touches[1].clientY
+                    );
+                    
+                    if (initialDistance !== 0) {
+                        currentScale = initialScale * (currentDistance / initialDistance);
+                        // Limit scale
+                        currentScale = Math.max(0.5, Math.min(currentScale, 3));
+                        updateImageTransform();
+                    }
+                }
+            }
+            
+            function handleTouchEnd() {
+                initialDistance = 0;
+                isDragging = false;
+            }
+            
+            function getDistance(x1, y1, x2, y2) {
+                return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+            }
+            
+            function updateImageTransform() {
+                userImage.style.transform = `translate(${posX}px, ${posY}px) scale(${currentScale})`;
+            }
+            
+            function resetImagePosition() {
+                posX = 0;
+                posY = 0;
+                currentScale = 1;
+                updateImageTransform();
+            }
+        });
+    </script>
 </body>
 </html>
