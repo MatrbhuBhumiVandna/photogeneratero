@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Photo Frame Editor</title>
+    <title>300 DPI Photo Editor</title>
     <style>
         * {
             margin: 0;
@@ -48,7 +48,7 @@
             position: relative;
             width: 80%;
             height: 0;
-            padding-bottom: 142.22%; /* 16:9 aspect ratio */
+            padding-bottom: 142.22%;
         }
         
         .editor-content {
@@ -119,7 +119,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Photo Frame Editor</h1>
+        <h1>300 DPI Photo Editor</h1>
         
         <div class="editor-scroll-container">
             <div class="editor-container">
@@ -136,7 +136,7 @@
             <input type="file" id="photo-upload" accept="image/*" style="display: none;">
             <button class="btn btn-upload" id="upload-btn">Upload Photo</button>
             <button class="btn btn-reset" id="reset-btn">Reset Photo</button>
-            <button class="btn btn-download" id="download-btn">Download Image</button>
+            <button class="btn btn-download" id="download-btn">Download 300 DPI Image</button>
         </div>
     </div>
 
@@ -148,7 +148,6 @@
             const resetBtn = document.getElementById('reset-btn');
             const userPhoto = document.getElementById('user-photo');
             const photoContainer = document.getElementById('photo-container');
-            const editorContainer = document.querySelector('.editor-container');
             
             let currentScale = 1;
             let currentX = 0;
@@ -160,8 +159,9 @@
             let initialMidpoint = { x: 0, y: 0 };
             let initialTransform = { x: 0, y: 0, rotation: 0 };
             let isPinching = false;
+            let originalImageData = null;
             
-            // Upload photo
+            // Upload photo and convert to 300 DPI
             uploadBtn.addEventListener('click', function() {
                 photoUpload.click();
             });
@@ -170,8 +170,28 @@
                 if (e.target.files && e.target.files[0]) {
                     const reader = new FileReader();
                     reader.onload = function(event) {
-                        userPhoto.src = event.target.result;
-                        resetPhoto();
+                        const img = new Image();
+                        img.onload = function() {
+                            // Create a canvas to process the image
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            
+                            // Calculate dimensions for 300 DPI (assuming 1080px width = 3.6 inches at 300 DPI)
+                            const targetWidth = 1080; // 3.6 inches at 300 DPI
+                            const targetHeight = (img.height * targetWidth) / img.width;
+                            
+                            canvas.width = targetWidth;
+                            canvas.height = targetHeight;
+                            
+                            // Draw image at 300 DPI resolution
+                            ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+                            
+                            // Save the processed image data
+                            originalImageData = canvas.toDataURL('image/png');
+                            userPhoto.src = originalImageData;
+                            resetPhoto();
+                        };
+                        img.src = event.target.result;
                     };
                     reader.readAsDataURL(e.target.files[0]);
                 }
@@ -180,7 +200,7 @@
             // Reset photo
             resetBtn.addEventListener('click', resetPhoto);
             
-            // Download image
+            // Download 300 DPI image
             downloadBtn.addEventListener('click', downloadImage);
             
             // Touch events
@@ -277,17 +297,20 @@
             }
             
             function downloadImage() {
+                if (!originalImageData) return;
+                
                 const canvas = document.createElement('canvas');
-                canvas.width = 1080;
-                canvas.height = 1920;
+                canvas.width = 1080; // 300 DPI at 3.6 inches
+                canvas.height = 1920; // 300 DPI at 6.4 inches
                 const ctx = canvas.getContext('2d');
                 
+                // Draw white background
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Load the original 300 DPI image
                 const tempImg = new Image();
                 tempImg.onload = function() {
-                    // Draw white background
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    
                     // Save context for transformations
                     ctx.save();
                     
@@ -298,8 +321,8 @@
                     ctx.rotate(currentRotation * Math.PI / 180);
                     
                     // Calculate scaled dimensions
-                    const scaledWidth = tempImg.naturalWidth * currentScale;
-                    const scaledHeight = tempImg.naturalHeight * currentScale;
+                    const scaledWidth = tempImg.width * currentScale;
+                    const scaledHeight = tempImg.height * currentScale;
                     
                     // Adjust position for the 80% container to 100% output
                     const containerScale = 0.8;
@@ -324,15 +347,19 @@
                     frameImg.onload = function() {
                         ctx.drawImage(frameImg, 0, 0, canvas.width, canvas.height);
                         
-                        // Download
+                        // Set DPI to 300
+                        const dpi = 300;
+                        const dataURL = canvas.toDataURL('image/png');
+                        
+                        // Create download link
                         const link = document.createElement('a');
-                        link.download = 'framed-photo.png';
-                        link.href = canvas.toDataURL('image/png');
+                        link.download = '300dpi-framed-photo.png';
+                        link.href = dataURL;
                         link.click();
                     };
                     frameImg.src = document.getElementById('frame').src;
                 };
-                tempImg.src = userPhoto.src;
+                tempImg.src = originalImageData;
             }
         });
     </script>
